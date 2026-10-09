@@ -181,3 +181,22 @@ test('config aanvullen behoudt eigen waarden', () => {
   assert.equal(c.organisatie.plaats, 'Wageningen');
   assert.ok(c.meters.length);
 });
+
+test('typen in de puntkaart geeft één historieregel per veld en fase', () => {
+  const { o } = opzet();
+  const p = M.nieuwPunt(o, { ruimte: 'Hal', omschrijving: 'Kras' }, t());
+  /* in dezelfde fase direct na vastleggen: geen historie (tikfout) */
+  M.wijzigPuntSamengevoegd(p, { omschrijving: 'Kras deur' }, o, t());
+  assert.equal(p.historie.length, 1);
+  M.startOplevering(o, t());
+  for (const w of ['Kras deur h', 'Kras deur ha', 'Kras deur hal']) M.wijzigPuntSamengevoegd(p, { omschrijving: w }, o, t());
+  assert.equal(p.historie.length, 2);
+  assert.deepEqual([p.historie[1].van.omschrijving, p.historie[1].naar.omschrijving], ['Kras deur', 'Kras deur hal']);
+  /* terug naar de oorspronkelijke tekst: de regel vervalt */
+  M.wijzigPuntSamengevoegd(p, { omschrijving: 'Kras deur' }, o, t());
+  assert.equal(p.historie.length, 1);
+  /* een ander veld krijgt een eigen regel */
+  M.wijzigPuntSamengevoegd(p, { omschrijving: 'Kras' }, o, t());
+  M.wijzigPuntSamengevoegd(p, { urgentie: 'B' }, o, t());
+  assert.equal(p.historie.length, 3);
+});

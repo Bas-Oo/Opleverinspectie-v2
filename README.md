@@ -1,6 +1,6 @@
 # Opleverinspectie 2 — Woningstichting Wageningen
 
-Webapp om bij de oplevering van nieuwbouw per woning en algemene ruimte de tekortkomingen vast te leggen, met foto, op de iPad. Werkt offline; alle gegevens staan op het apparaat. Versie **2.0.1** — een herbouw van versie 1 (zie `ONTWERP.md` voor het waarom).
+Webapp om bij de oplevering van nieuwbouw per woning en algemene ruimte de tekortkomingen vast te leggen, met foto, op de iPad. Werkt offline; alle gegevens staan op het apparaat. Versie **2.1.0**: de schermen en de bediening van versie 1, op de techniek van versie 2 (zie `ONTWERP.md`).
 
 ## Uitrollen naast versie 1
 
@@ -15,23 +15,42 @@ Waarom geen submap `Opleverinspectie/v2/`: de service worker van versie 1 geldt 
 
 Nieuwe versie uitrollen: bestanden vervangen en in `sw.js` het `VERSIE`-nummer ophogen (en `APP_VERSIE` in `js/config.js`). De app meldt dan zelf dat er een nieuwe versie is.
 
+Controlelijst bij uploaden via GitHub (Add files → Upload files): sleep de **inhoud** van de map in één keer naar de hoofdmap van de repository, dus de mappen `css`, `js`, `vendor`, `fonts`, `img`, `tests` en de losse bestanden. Staat een bestand in de lijst `BESTANDEN` in `sw.js` maar niet op GitHub, dan installeert de nieuwe versie niet. Bestanden die niet meer bestaan (zoals vroegere schermbestanden) mogen blijven staan; ze worden niet gebruikt.
+
 ## Werkwijze
 
-**Complex → Blok → Object**, en per object vier fases: **Vooropname → Oplevering → Herstelcontrole → Gereed**.
+**Complex → Blok → Object**, zoals in versie 1: het kruimelpad bovenin is de paginatitel, rechts staat één knop (Complex toevoegen ▾, Blok toevoegen, Object toevoegen) en alle andere acties staan onder het menu ☰ in de kop.
+
+Per object zijn er acht tabbladen. Kruimelpad en tabbladen blijven onder de kop staan; de donkere tabknop schuift mee.
+
+| Tabblad | Inhoud |
+|---|---|
+| Gegevens | Opdrachtgever en partijen (leeg = de standaard van het complex) |
+| Vooropname | Puntkaarten: ruimte, omschrijving, A/B/C, foto, niet erkend. *+ Tekortkoming* maakt een nieuw punt |
+| Oplevering | *Oplevering starten* legt de vooropname vast. Daarna per punt *Hersteld* of *Niet hersteld*, en nieuwe punten |
+| Herstel | Nieuw in versie 2: binnen de termijn per punt *Hersteld (paraaf)* of *Nog open*; *+ Nagekomen punt* |
+| Meterstanden | Ja/nee, netbeheerders, standen met foto |
+| Overige zaken | Sleutels, raamsleutels, inregelrapporten enzovoort; *Kopiëren* van een andere woning |
+| Afronden | Aandachtspunten (rood blokkeert, geel waarschuwt), plaats en datum, twee handtekeningvakken, de PDF's, *Afronding heropenen…*, eerdere versies en tekortkomingen exporteren (PDF of Excel) |
+| Documenten | Nieuw in versie 2: alle vastgelegde processen-verbaal, met PDF en details (kenmerk, echtheidscontrole) |
+
+Fases per object: **Vooropname → Oplevering → Herstelcontrole → Gereed**.
 
 | Fase | Wat je doet | Wat er wordt vastgelegd |
 |---|---|---|
-| Vooropname | Punten vastleggen: *Punt met foto* opent direct de camera, daarna ruimte, omschrijving en urgentie | Bij *Oplevering starten*: PV vooropname (niet ondertekend) |
-| Oplevering | Elk vooropnamepunt beoordelen (hersteld / nog open), nieuwe punten, meterstanden, overige zaken, ondertekenen | PV oplevering, met beide handtekeningen |
-| Herstelcontrole | Binnen de termijn (standaard 10 werkdagen) per punt *Hersteld (paraaf)* of *Nog open*; vergeten punten als nagekomen punt | PV herstelcontrole per ronde; open punten gaan naar een volgende ronde |
+| Vooropname | Punten vastleggen | Bij *Oplevering starten*: PV vooropname (niet ondertekend) |
+| Oplevering | Elk vooropnamepunt beoordelen, nieuwe punten, meterstanden, overige zaken, ondertekenen op Afronden | PV oplevering, met beide handtekeningen |
+| Herstelcontrole | Binnen de termijn (standaard 10 werkdagen) per punt *Hersteld (paraaf)* of *Nog open*; tekenen op Afronden | PV herstelcontrole per ronde; open punten gaan naar een volgende ronde |
 | Gereed | Alles hersteld | — |
+
+**Blok afronden** en **Complex afronden** (menu ☰) werken zoals in versie 1: aanvinken, één keer tekenen. Er ontstaat één verzamel-proces-verbaal; dat staat daarna onder *Verzamelafrondingen* op het blok- en complexscherm.
 
 Kernregels:
 
 - **Vaste nummers.** Een punt houdt zijn nummer in alle fases en documenten. Nummers worden nooit hergebruikt.
 - **Eén punt, één record.** Een vooropnamepunt is in de oplevering hetzelfde punt, met een historie van elke wijziging.
 - **Protocol afgedwongen.** Een open A- of B-punt blokkeert het ondertekenen (instelbaar). De C-limiet per woning en per blok geeft een waarschuwing.
-- **Controle vóór tekenen.** Het tekenscherm toont rood (blokkeert) en geel (waarschuwing), en elke melding is een link naar de plek waar je het oplost.
+- **Controle vóór tekenen.** Het tabblad Afronden toont rood (blokkeert) en geel (waarschuwing), en elke melding is een link naar het tabblad waar je het oplost.
 - **Toch iets vergeten?** In de herstelcontrole: *nagekomen punt*. Zolang er nog niets is hersteld kan ook een **herziening** van de oplevering; die wordt opnieuw getekend en vervangt het eerdere PV, dat ongewijzigd bewaard blijft.
 - **Gezamenlijk ondertekenen** (blok of complex): één verzamel-PV met per object de volledige lijst, de meterstanden en de overige zaken. Beide partijen tekenen dat ene document.
 
@@ -44,15 +63,15 @@ Bij ondertekenen wordt de PDF **één keer** gemaakt en opgeslagen. Downloaden l
 
 ## Exports
 
-Per object, blok of complex (menu ☰): **Tekortkomingen naar Excel** (één regel per punt met kenmerk, plus een blad per object) en **Tekortkomingenlijst (PDF)** zonder foto's. Dat zijn rapporten, geen ondertekende documenten.
+Op het tabblad Afronden en op het scherm Blok/Complex afronden: kies **PDF** of **Excel** en daarna deze woning, het blok of het hele complex. **Excel** (één regel per punt met kenmerk, plus een blad per object) en de **PDF**-tekortkomingenlijst zonder foto's. Dat zijn rapporten, geen ondertekende documenten.
 
 ## Importeren
 
-*Complex toevoegen › Importeren uit Excel*. Kolommen: `Adres`, of `Straat` + `Huisnummer` + `Toevoeging`; verder optioneel `Complex`, `Complexnaam`, `Blok`, `Woningtype`. Een toevoeging die met "alg" begint wordt een algemene ruimte. Ontbreekt de kolom Complex of Woningtype, dan vraagt de app erom. Bestaande adressen worden overgeslagen; er wordt nooit iets gewijzigd of verwijderd.
+*Complex toevoegen ▾ › Importeren via Excel*. Kolommen: `Adres`, of `Straat` + `Huisnummer` + `Toevoeging`; verder optioneel `Complex`, `Complexnaam`, `Blok`, `Woningtype`. Een toevoeging die met "alg" begint wordt een algemene ruimte. Ontbreekt de kolom Complex of Woningtype, dan vraagt de app erom. Bestaande adressen worden overgeslagen; er wordt nooit iets gewijzigd of verwijderd.
 
 ## Back-up (tot er een server is)
 
-- Menu ☰ op het startscherm: **Back-up maken (alles)**, of per complex. Formaat: `.jsonl`, met alle gegevens, foto's, handtekeningen en PDF's.
+- Menu ☰ op het complexoverzicht: **Back-up maken (alles)**; in een complex: **Back-up van dit complex**. Onderaan het complexscherm staat wanneer de laatste back-up was. Formaat: `.jsonl`, met alle gegevens, foto's, handtekeningen en PDF's.
 - De app herinnert je eraan als er wijzigingen zijn en de laatste back-up ouder is dan 20 uur.
 - **Terugzetten**: *Samenvoegen* werkt **per record** (punt, object, blok) op wijzigingstijd, en verwijderingen gaan mee. Twee tablets in hetzelfde complex raken elkaars werk dus niet kwijt. *Alles vervangen* wist eerst de tablet.
 - Back-ups van versie 1 kunnen niet worden ingelezen (ander gegevensmodel).

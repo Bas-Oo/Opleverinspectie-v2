@@ -42,8 +42,13 @@ export async function maakBackup(complex) {
   toast(mist ? `Back-up gereed; ${mist} bestand(en) niet gevonden` : 'Back-up gereed', 2500);
   const naam = `opleverinspectie-backup_${complex ? 'complex-' + complex.nummer.replace(/[^\w-]+/g, '-') + '_' : ''}${M.vandaag()}.jsonl`;
   await leverBestand(blob, naam, 'Back-up gereed', `${sets.punten.filter(M.levend).length} punten, ${fotos.size} foto's, ${sets.documenten.length} documenten`, async () => {
+    const nu = M.nuISO();
     if (!complex) await store.metaPut('sindsBackup', 0);
-    await store.metaPut('laatsteBackup', M.nuISO());
+    await store.metaPut('laatsteBackup', nu);
+    /* Per complex onthouden wanneer de laatste back-up is gemaakt (staat onderaan het complexscherm, zoals in versie 1) */
+    const geraakt = complex ? [complex] : complexen();
+    for (const c of geraakt) c.laatsteBackup = nu;
+    await store.bewaar(geraakt.map(c => /** @type {[string, any]} */ (['complexen', c])));
   });
   ververs();
 }

@@ -4,8 +4,10 @@ import { h } from './ui.js';
 
 export function tekenvak(label, naam = '') {
   const cv = /** @type {HTMLCanvasElement} */ (h('canvas', { 'aria-label': 'Tekenvak handtekening ' + label }));
-  const naamEl = h('span.tv-naam', naam);
-  const el = h('div.tekenvak', h('div.tv-kop', h('strong', label), naamEl, h('button.knop.licht.klein', { type: 'button', onclick: () => { lijnen = []; teken(); } }, 'Wissen')), cv, h('div.tv-lijn'));
+  const naamEl = h('span', naam ? '— ' + naam : '');
+  /* Opmaak van versie 1: naam boven het vak, knop Wissen eronder */
+  const el = h('div.hand', h('div.naam', label, naamEl), cv,
+    h('div.hand-rij', h('button.knop.licht.klein', { type: 'button', onclick: () => { lijnen = []; teken(); } }, 'Wissen')));
   const ctx = /** @type {CanvasRenderingContext2D} */ (cv.getContext('2d'));
   /** @type {Array<Array<[number, number]>>} lijnen in genormaliseerde coördinaten (0..1), zodat draaien niets kapotmaakt */
   let lijnen = [], huidig = null, b = 1, hh = 1;
@@ -30,7 +32,7 @@ export function tekenvak(label, naam = '') {
   return {
     el,
     leeg: () => lijnen.length === 0,
-    zetNaam: n => { naamEl.textContent = n; },
+    zetNaam: n => { naamEl.textContent = n ? '— ' + n : ''; },
     opWijzig: f => wijzigers.add(f),
     /** PNG op vaste breedte, los van de schermmaat */
     png: () => new Promise((res, rej) => {

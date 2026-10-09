@@ -1,12 +1,12 @@
 /* Service worker: de hele app in één versie-cache, zodat hij offline werkt en alle bestanden altijd bij elkaar passen.
    Nieuwe versie uitrollen = VERSIE ophogen. De app meldt dan "Er is een nieuwe versie" en wisselt pas na een tik. */
-const VERSIE = '2.0.1';
+const VERSIE = '2.1.0';
 /* Eigen voorvoegsel 'oi2-app-': versie 1 ruimt bij een update alle caches op die met 'opleverinspectie-' beginnen */
 const CACHE = 'oi2-app-' + VERSIE;
 const BESTANDEN = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/backup.js', 'js/config.js', 'js/documenten.js', 'js/excel.js', 'js/foto.js', 'js/handtekening.js', 'js/lader.js',
-  'js/model.js', 'js/nav.js', 'js/pdf.js', 'js/scherm-object.js', 'js/scherm-overig.js', 'js/scherm-overzicht.js', 'js/scherm-tekenen.js',
+  'js/model.js', 'js/nav.js', 'js/pdf.js', 'js/scherm-afronden.js', 'js/scherm-object.js', 'js/scherm-overig.js', 'js/scherm-overzicht.js', 'js/scherm-punten.js', 'js/scherm-tekenen.js',
   'js/sha256.js', 'js/staat.js', 'js/store.js', 'js/stukjes.js', 'js/ui.js',
   'vendor/jspdf.umd.min.js', 'vendor/jspdf.plugin.autotable.min.js', 'vendor/xlsx.full.min.js',
   'fonts/RedditSans-Regular.woff2', 'fonts/RedditSans-Bold.woff2', 'fonts/RedditSans-Regular.ttf', 'fonts/RedditSans-Bold.ttf',

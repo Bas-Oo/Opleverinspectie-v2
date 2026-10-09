@@ -68,7 +68,10 @@ export async function bewaar(ops) {
   });
   tijdelijkeWijzigingen.aantal += ops.length;
   verhoogTeller(ops.length);
+  for (const f of naOpslaan) try { f(); } catch (e) { /* weergave mag opslaan nooit breken */ }
 }
+/** Luisteraars na elke geslaagde opslag (statusregel "Opgeslagen 14:32" onderaan het scherm) */
+export const naOpslaan = new Set();
 /* Wijzigingen sinds de laatste back-up, voor de herinnering */
 let tellerTimer = null, tellerExtra = 0;
 function verhoogTeller(n) {
