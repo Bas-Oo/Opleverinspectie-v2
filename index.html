@@ -2,13 +2,13 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Oplevering">
-<title>Opleverinspectie — Woningstichting Wageningen</title>
+<meta name="apple-mobile-web-app-title" content="Opleverinspectie">
+<title>Opleverinspectie nieuwbouw — Woningstichting Wageningen</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="img/icon-192.png">
 <link rel="apple-touch-icon" href="img/icon-180.png">
@@ -18,9 +18,9 @@
 <body>
 <header class="kop" id="kop"></header>
 <div id="meldingen" aria-live="polite"></div>
-<main id="main"><div class="leeg-staat"><strong>Opleverinspectie wordt geladen…</strong></div></main>
-<div id="balk"></div>
 <noscript><p style="padding:20px">Deze app heeft JavaScript nodig.</p></noscript>
+<main id="main"><div class="leeg-staat"><strong>Opleverinspectie wordt geladen…</strong></div></main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
 /* Vangnet voor browsers die de app niet kunnen laden (te oud, geen modules) */
 window.addEventListener('error', function (e) {

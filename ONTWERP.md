@@ -53,6 +53,26 @@ Opdrachtgever, urgentieklassen, limieten, termijn, verklaringsteksten, ruimtes, 
 - Actiebalk onderin met de volgende stap van de fase.
 - Complexoverzicht als matrix per blok, met fase-kleur, open A/B en verlopen termijn.
 
+## 7. Versie 2.1: de schermen van versie 1
+
+Versie 2.0 had een nieuwe bediening (fasebalk, actiebalk onderin, punten als losse kaarten met een invulscherm). In 2.1 zijn de schermen weer die van versie 1, terwijl alles onder de schermen van versie 2 blijft.
+
+| Gelijk aan versie 1 | Onder de motorkap (versie 2) |
+|---|---|
+| Kop met logo en één menu ☰; kruimelpad als titel | Routering via de hash; terug en terugvegen werken vanzelf |
+| Objectscherm met tabbladen en schuivende tabknop; schuif-fade bij wisselen | Wisselen van tabblad vervangt de plek in de geschiedenis, zoals in versie 1 |
+| Puntkaarten die je direct invult: ruimte, omschrijving, A/B/C, foto | Elke wijziging via `wijzigPuntSamengevoegd` (model.js): typen geeft één historieregel per veld en fase, niet één per toets |
+| Ondertekenen op het tabblad Afronden, twee handtekeningvakken | `onderteken()` maakt het PV één keer en bevriest het, met inhoudskenmerk |
+| *Afronding heropenen…* met reden; *Eerdere versies* | `startHerziening()`; het oude document blijft ongewijzigd en wordt gemarkeerd als vervangen |
+| Blok/Complex afronden met groepen, Alles/Niets, één keer tekenen | `ondertekenVerzamel()`: één verzamel-PV met de volledige inhoud per object |
+| Complex instellingen met standaardgegevens en waarschuwing C-punten | De C-limiet staat in de configuratie en geldt voor alle complexen |
+
+Wat versie 1 niet had, staat in dezelfde vormgeving erbij: het tabblad **Herstel**, het tabblad **Documenten**, het documentscherm met echtheidscontrole en **Instellingen** (menu ☰ op het complexoverzicht).
+
+Wat bewust anders is dan versie 1: punten worden niet hernummerd; *Paraaf* hoort bij de herstelcontrole en niet bij de oplevering; *Niet erkend* vraagt om een reden; een punt dat in een vastgelegd document staat kan niet worden verwijderd, alleen *laten vervallen* met een reden; *Oplevering ongedaan maken* bestaat niet meer, omdat de vooropname bij het starten wordt vastgelegd.
+
+De schermen staan in `scherm-overzicht.js` (complexen, complex, blok), `scherm-object.js` (tabbladen, gegevens, meterstanden, overige zaken), `scherm-punten.js` (vooropname, oplevering, herstel), `scherm-afronden.js` (afronden, documenten, exporteren), `scherm-tekenen.js` (blok/complex afronden) en `scherm-overig.js` (instellingen, document). De opmaak in `css/app.css` is die van versie 1, aangevuld voor de nieuwe onderdelen.
+
 ## Nog niet gebouwd
 
 1. **Server als bron van waarheid.** Het opslagmodel is erop voorbereid: elk record heeft `id`, `gewijzigd`, `rev` en eventueel `verwijderd`, en documenten zijn onveranderlijk. Synchroniseren kan dus per record (bijvoorbeeld Cloudflare D1 voor de gegevens en R2 voor de foto's en PDF's). Foto's zouden dan direct na het maken in een uploadwachtrij gaan, en de handmatige back-up vervalt.

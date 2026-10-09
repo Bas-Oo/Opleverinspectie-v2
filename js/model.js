@@ -120,6 +120,23 @@ export function wijzigPunt(punt, velden, object, t = nuISO()) {
   if (!vers) punt.historie.push({ t, fase: object.fase, actie: 'gewijzigd', van: oud, naar: nieuw });
   return true;
 }
+/** Zoals wijzigPunt, maar voor velden die op het scherm direct worden bewerkt (typen in de puntkaart).
+ *  Volgt deze wijziging binnen 'venster' ms op een wijziging van dezelfde velden in dezelfde fase, dan wordt die
+ *  historieregel bijgewerkt in plaats van per toetsaanslag een nieuwe regel te maken. Komt de waarde terug op de
+ *  oorspronkelijke, dan vervalt de regel. Fase-overgangen (vastleggen, ondertekenen) wisselen altijd van fase,
+ *  dus een samengevoegde regel valt nooit over een vastgelegd document heen. */
+export function wijzigPuntSamengevoegd(punt, velden, object, t = nuISO(), venster = 10 * 60 * 1000) {
+  const keys = ['ruimte', 'omschrijving', 'urgentie', 'fotoId'].filter(k => k in velden && velden[k] !== punt[k]);
+  if (!keys.length) return false;
+  const laatste = punt.historie[punt.historie.length - 1];
+  const zelfde = laatste && laatste.actie === 'gewijzigd' && laatste.fase === object.fase && laatste.naar
+    && keys.every(k => k in laatste.naar) && Object.keys(laatste.naar).every(k => keys.includes(k) || laatste.naar[k] === punt[k])
+    && Date.parse(t) - Date.parse(laatste.t) < venster;
+  if (!zelfde) return wijzigPunt(punt, Object.fromEntries(keys.map(k => [k, velden[k]])), object, t);
+  for (const k of keys) { punt[k] = velden[k]; laatste.naar[k] = velden[k]; }
+  if (Object.keys(laatste.naar).every(k => (laatste.naar[k] ?? '') === (laatste.van[k] ?? ''))) punt.historie.pop();
+  return true;
+}
 /** Hersteld of nog open in de lopende fase. In de herstelcontrole is 'hersteld' tegelijk de paraaf van de opdrachtgever. */
 export function beoordeel(punt, object, uitkomst, t = nuISO(), door = '') {
   if (!BEOORDELING.includes(uitkomst)) throw new Error('onbekende beoordeling');

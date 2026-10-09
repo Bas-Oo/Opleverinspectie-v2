@@ -2,7 +2,7 @@
 /* Foto's: verkleinen, opslaan (volledig + miniatuur in één transactie), miniaturen tonen en groot bekijken. */
 import * as store from './store.js';
 import { uid } from './model.js';
-import { h, dialoog } from './ui.js';
+import { h, dialoog, toast, bevestig } from './ui.js';
 
 export const FOTO_PX = 1600, MINI_PX = 320;
 
@@ -70,4 +70,47 @@ export function camera() {
 
 export async function blobAlsDataURL(blob) {
   return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(/** @type {string} */ (r.result)); r.onerror = () => rej(r.error); r.readAsDataURL(blob); });
+}
+
+/* ===== Fotoblok van versie 1: vak met camera, miniatuur en fotonummer; tikken = groot bekijken, vervangen of verwijderen =====
+   opties: {klein, nr, label, tekst (string of functie), alleenLezen, onGezet(id), onWeg()} */
+export function fotoBlok(id, opties = {}) {
+  const ro = !!opties.alleenLezen;
+  const el = h('div.foto', { class: (opties.klein ? 'klein ' : '') + (ro ? 'slot' : ''), role: 'button', tabindex: 0, 'aria-label': id ? 'Foto bekijken' : ro ? 'Geen foto' : 'Foto maken' });
+  const toon = async () => {
+    const u = id ? await miniURL(id) : null;
+    el.replaceChildren();
+    el.classList.toggle('gezet', !!u);
+    if (u) { el.appendChild(h('img', { src: u, alt: '' })); if (opties.nr) el.appendChild(h('span.nr', opties.nr)); }
+    else el.append(h('span.ico', ro ? '—' : '📷'), h('span', ro ? 'Geen foto' : (opties.label || 'Foto')));
+  };
+  toon();
+  const neem = async f => {
+    if (!f) return;
+    el.classList.add('bezig');
+    try { id = await bewaarFoto(f); await opties.onGezet(id); await toon(); }
+    catch (e) { toast('Foto mislukt: ' + (e && e.message), 4000); }
+    el.classList.remove('bezig');
+  };
+  const open = async () => {
+    if (!id) { if (!ro) neem(await camera()); return; }
+    const b = await store.blobGet('fotos', id);
+    if (!b) return toast('Foto niet gevonden in de opslag');
+    const u = URL.createObjectURL(b), tekst = typeof opties.tekst === 'function' ? opties.tekst() : (opties.tekst || '');
+    const sluit = () => { m.remove(); URL.revokeObjectURL(u); document.removeEventListener('keydown', esc); };
+    const esc = e => { if (e.key === 'Escape') sluit(); };
+    const m = h('div.modal', { onclick: e => { if (e.target === m) sluit(); } }, h('img', { src: u, alt: '' }), tekst ? h('div.modal-tekst', tekst) : null,
+      h('div.modal-acties', h('button.knop.licht', { type: 'button', dataset: { a: 'sluit' }, onclick: sluit }, 'Sluiten'),
+        ro ? null : h('button.knop', { type: 'button', onclick: async () => { const f = camera(); sluit(); neem(await f); } }, 'Vervangen'),
+        ro ? null : h('button.knop.rood', { type: 'button', onclick: async () => {
+          sluit();
+          if (!await bevestig('Foto verwijderen?', 'De foto wordt bij dit punt verwijderd.', 'Verwijderen', true)) return;
+          id = null; await opties.onWeg(); await toon();
+        } }, 'Verwijderen')));
+    document.addEventListener('keydown', esc);
+    document.body.appendChild(m);
+  };
+  el.addEventListener('click', open);
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') open(); });
+  return el;
 }

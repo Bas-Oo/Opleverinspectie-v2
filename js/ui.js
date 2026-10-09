@@ -1,5 +1,6 @@
 // @ts-check
-/* Kleine UI-bouwstenen: elementen maken zonder innerHTML (geen escape-fouten), dialogen, toast, menu's en bestanden afleveren. */
+/* Kleine UI-bouwstenen: elementen maken zonder innerHTML (geen escape-fouten), dialogen, toast, menu's en bestanden afleveren.
+   De markup volgt versie 1 (.dialoog > .kaart, .uitklap > .uitklap-menu, .keuze, .toast), zodat de app er hetzelfde uitziet. */
 
 /** h('div.kaart#id', {onclick, class, ...}, kinderen...)  — kinderen: Node | string | number | null | array */
 export function h(sel, attrs, ...kids) {
@@ -37,31 +38,22 @@ const svg = (d, extra = '') => {
   return /** @type {Element} */ (t.content.firstChild);
 };
 export const ICOON = {
-  menu: () => svg('<path d="M4 6h16M4 12h16M4 18h16"/>'),
+  menu: () => svg('<path d="M4 6h16M4 12h16M4 18h16"/>', 'stroke-width="2.2"'),
   camera: () => svg('<path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/>'),
   plus: () => svg('<path d="M12 5v14M5 12h14"/>'),
-  terug: () => svg('<path d="M15 18l-6-6 6-6"/>'),
   verder: () => svg('<path d="M9 18l6-6-6-6"/>'),
   vink: () => svg('<path d="M5 12l5 5L20 7"/>'),
-  kruis: () => svg('<path d="M6 6l12 12M18 6L6 18"/>'),
-  slot: () => svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
-  pen: () => svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
   doc: () => svg('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>'),
-  waarsch: () => svg('<path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5v.5"/>'),
-  info: () => svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/>'),
   schijf: () => svg('<path d="M5 3h11l5 5v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 3v5h8V3"/><rect x="7" y="13" width="10" height="8" rx="1"/>'),
-  meter: () => svg('<circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M12 5V3"/>'),
-  lijst: () => svg('<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>'),
-  gegevens: () => svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
-  klok: () => svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
   delen: () => svg('<path d="M12 3v13M7 8l5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>'),
-  excel: () => svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>')
+  excel: () => svg('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/>'),
+  instellingen: () => svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>')
 };
 
 /* ===== Toast ===== */
 let toastTimer;
-export function toast(tekst, ms = 2400) {
-  let el = $('#toast'); if (!el) { el = h('div#toast', { role: 'status', 'aria-live': 'polite' }); document.body.appendChild(el); }
+export function toast(tekst, ms = 2200) {
+  let el = $('#toast'); if (!el) { el = h('div.toast#toast', { role: 'status', 'aria-live': 'polite' }); document.body.appendChild(el); }
   el.textContent = tekst; el.classList.add('zichtbaar');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('zichtbaar'), ms);
 }
@@ -70,20 +62,24 @@ export function toast(tekst, ms = 2400) {
    Alle dialogen sluiten bij 'terug' (hashchange) en bij Escape. */
 const openDialogen = new Set();
 export function sluitAlleDialogen() { for (const f of Array.from(openDialogen)) f(); }
+export const heeftDialoog = () => openDialogen.size > 0;
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && openDialogen.size) Array.from(openDialogen).pop()(); });
 
-/** Basisdialoog. inhoud: Node; knoppen: [{tekst, waarde, soort}] → resolve(waarde); sluiten → resolve(null) */
-export function dialoog({ titel, tekst = '', inhoud = null, knoppen = [{ tekst: 'OK', waarde: true }], breed = false, controle = null }) {
+/** Basisdialoog. inhoud: Node; knoppen: [{tekst, waarde, soort}] → resolve(waarde); sluiten → resolve(null).
+ *  onder: knoppen in een aparte rij onderaan (bijv. verwijderen), gescheiden door een lijn. */
+export function dialoog({ titel, tekst = '', inhoud = null, knoppen = [{ tekst: 'OK', waarde: true }], onder = [], breed = false, controle = null }) {
   return new Promise(res => {
     const sluit = (w = null) => { openDialogen.delete(annuleer); achter.remove(); res(w); };
     const annuleer = () => sluit(null);
-    const kaart = h('div.dlg-kaart', { class: breed ? 'breed' : '', role: 'dialog', 'aria-modal': 'true', 'aria-label': titel },
-      h('h2', titel), tekst ? h('p.dlg-tekst', tekst) : null, inhoud,
-      h('div.knoprij.dlg-knoppen', knoppen.map(k => h('button.knop', {
-        class: k.soort || '', type: 'button',
-        onclick: async () => { if (k.waarde !== null && controle) { const fout = await controle(k.waarde); if (fout) return toast(fout, 3500); } sluit(k.waarde); }
-      }, k.tekst))));
-    const achter = h('div.dlg-achter', { onclick: e => { if (e.target === achter) annuleer(); } }, kaart);
+    const knop = k => h('button.knop', {
+      class: k.soort || '', type: 'button', dataset: { a: k.waarde === null ? 'nee' : String(k.waarde) },
+      onclick: async () => { if (k.waarde !== null && controle) { const fout = await controle(k.waarde); if (fout) return toast(fout, 3500); } sluit(k.waarde); }
+    }, k.tekst);
+    const kaart = h('div.kaart', { class: breed ? 'breed' : '', role: 'dialog', 'aria-modal': 'true', 'aria-label': titel },
+      h('h2', titel), tekst ? h('p', tekst) : null, inhoud,
+      h('div.knoprij.dlg-knoppen', knoppen.map(knop)),
+      onder.length ? h('div.knoprij', { style: { marginTop: '18px', borderTop: '1px solid var(--lijn)', paddingTop: '12px' } }, onder.map(knop)) : null);
+    const achter = h('div.dialoog', { onclick: e => { if (e.target === achter) annuleer(); } }, kaart);
     openDialogen.add(annuleer);
     document.body.appendChild(achter);
     /* Eerste veld focussen, maar niet als de gebruiker intussen zelf al een veld heeft gekozen */
@@ -94,37 +90,46 @@ export function dialoog({ titel, tekst = '', inhoud = null, knoppen = [{ tekst: 
 export const bevestig = (titel, tekst, ok = 'OK', gevaar = false) =>
   dialoog({ titel, tekst, knoppen: [{ tekst: 'Annuleren', waarde: null, soort: 'licht' }, { tekst: ok, waarde: true, soort: gevaar ? 'rood' : '' }] }).then(Boolean);
 export const meld = (titel, tekst) => dialoog({ titel, tekst });
+/** Keuzedialoog: knoppen = [{waarde, tekst, soort}] → gekozen waarde of null */
+export const kies = (titel, tekst, knoppen) => dialoog({ titel, tekst, knoppen });
 
-/** Formulierdialoog. velden: [{key, label, waarde, soort:'tekst'|'getal'|'keuze'|'lang'|'datum', opties, hint, verplicht}] → object of null */
-export async function formulier({ titel, tekst = '', velden, ok = 'Opslaan', extra = [] }) {
+/** Formulierdialoog. velden: [{key, label, waarde, soort:'tekst'|'getal'|'keuze'|'lang'|'datum', opties, hint, verplicht, sectie}] → object of null.
+ *  sectie: tussenkop boven het veld (zoals in Complex instellingen van versie 1). extra: knoppen onderaan, bijv. {tekst:'Verwijderen…', waarde:'weg', soort:'gevaar'} */
+export async function formulier({ titel, tekst = '', velden, ok = 'Opslaan', extra = [], breed = false }) {
   const inputs = {};
-  const inhoud = h('div.velden', velden.map(v => {
+  const inhoud = h('div', velden.map(v => {
     let inp;
     if (v.soort === 'keuze') inp = h('select.invoer', v.opties.map(o => h('option', { value: o, selected: o === v.waarde }, o)));
-    else if (v.soort === 'lang') inp = h('textarea.invoer', { rows: v.rijen || 4, value: v.waarde || '' });
+    else if (v.soort === 'lang') inp = h('textarea.invoer', { rows: v.rijen || 3, value: v.waarde || '', placeholder: v.placeholder || '' });
     else inp = h('input.invoer', { type: v.soort === 'datum' ? 'date' : 'text', inputmode: v.soort === 'getal' ? 'numeric' : null, value: v.waarde ?? '', placeholder: v.placeholder || '', autocomplete: 'off' });
+    if (v.soort === 'getal') inp.addEventListener('input', () => { /** @type {HTMLInputElement} */ (inp).value = /** @type {HTMLInputElement} */ (inp).value.replace(/[^0-9]/g, ''); });
     inputs[v.key] = inp;
-    return h('label.veld', h('span.label', v.label), inp, v.hint ? h('span.hint', v.hint) : null);
+    return [v.sectie ? h('h3.dlg-sectie', v.sectie) : null, v.sectieHint ? h('p.dlg-hint', v.sectieHint) : null,
+      h('label.veld', h('span.label', v.label), inp, v.hint ? h('span.hint', v.hint) : null)];
   }));
   inhoud.addEventListener('keydown', e => { if (e.key === 'Enter' && /** @type {HTMLElement} */ (e.target).tagName === 'INPUT') { e.preventDefault(); /** @type {HTMLElement} */ ($('.dlg-knoppen .knop:last-child', inhoud.parentElement)).click(); } });
-  const w = await dialoog({ titel, tekst, inhoud, knoppen: [...extra, { tekst: 'Annuleren', waarde: null, soort: 'licht' }, { tekst: ok, waarde: 'ok' }],
+  const w = await dialoog({ titel, tekst, inhoud, breed, knoppen: [{ tekst: 'Annuleren', waarde: null, soort: 'licht' }, { tekst: ok, waarde: 'ok' }], onder: extra,
     controle: waarde => { if (waarde !== 'ok') return null; const mist = velden.find(v => v.verplicht && !String(inputs[v.key].value).trim()); return mist ? `Vul in: ${mist.label.toLowerCase()}` : null; } });
   if (w === null) return null;
   if (w !== 'ok') return { _actie: w };
   return Object.fromEntries(velden.map(v => [v.key, String(inputs[v.key].value).trim()]));
 }
 
-/* ===== Uitklapmenu ===== */
+/* ===== Uitklapmenu (versie 1: één menu-icoon in de kop, en knoppen met een ▾) ===== */
 let openMenu = null;
-export function sluitMenu() { if (openMenu) { openMenu.hidden = true; openMenu.previousSibling.setAttribute('aria-expanded', 'false'); openMenu = null; } }
-document.addEventListener('pointerdown', e => { if (openMenu && !openMenu.parentElement.contains(/** @type {Node} */ (e.target))) sluitMenu(); }, true);
-/** items: [{tekst, fn, gevaar, uit}] of null (scheidingslijn) */
+export function sluitMenu() { if (openMenu) { openMenu.menu.hidden = true; openMenu.knop.setAttribute('aria-expanded', 'false'); openMenu = null; } }
+document.addEventListener('pointerdown', e => { if (openMenu && !openMenu.wrap.contains(/** @type {Node} */ (e.target))) sluitMenu(); }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && openMenu) { const k = openMenu.knop; sluitMenu(); k.focus(); } });
+/** items: [{tekst, fn, gevaar, uit, icoon, titel}] of null (scheidingslijn) */
 export function menu(knop, items) {
-  const lijst = h('div.menu', { role: 'menu', hidden: true }, items.map(i => i === null ? h('hr') :
-    h('button', { type: 'button', role: 'menuitem', class: i.gevaar ? 'gevaar' : '', disabled: !!i.uit, onclick: () => { sluitMenu(); i.fn(); } }, i.icoon ? i.icoon() : null, h('span', i.tekst))));
+  const metIcoon = items.some(i => i && i.icoon);
+  const lijst = h('div.uitklap-menu', { role: 'menu', hidden: true }, items.map(i => i === null ? h('hr') :
+    h('button', { type: 'button', role: 'menuitem', class: i.gevaar ? 'gevaar' : '', disabled: !!i.uit, title: i.titel || null, onclick: () => { if (i.uit) return; sluitMenu(); i.fn(); } },
+      i.icoon ? i.icoon() : metIcoon ? h('span.ui-leeg') : null, h('span', i.tekst))));
+  const wrap = h('div.uitklap', knop, lijst);
   knop.setAttribute('aria-haspopup', 'menu'); knop.setAttribute('aria-expanded', 'false');
-  knop.addEventListener('click', () => { const was = openMenu === lijst; sluitMenu(); if (was) return; lijst.hidden = false; knop.setAttribute('aria-expanded', 'true'); openMenu = lijst; });
-  return h('div.menu-wrap', knop, lijst);
+  knop.addEventListener('click', () => { const was = openMenu && openMenu.menu === lijst; sluitMenu(); if (was) return; lijst.hidden = false; knop.setAttribute('aria-expanded', 'true'); openMenu = { menu: lijst, knop, wrap }; });
+  return wrap;
 }
 
 /* ===== Keuzeknoppen (segmenten) ===== */
@@ -132,8 +137,8 @@ export function keuze(opties, waarde, opWijzig, { uitzetbaar = true, uit = false
   const wrap = h('div.keuze', { class: klasse, role: 'radiogroup' });
   const teken = () => { for (const b of wrap.children) { const aan = /** @type {HTMLElement} */ (b).dataset.w === waarde; b.classList.toggle('aan', aan); b.setAttribute('aria-checked', String(aan)); } };
   for (const o of opties) {
-    const [w, label, sub] = Array.isArray(o) ? o : [o, o];
-    wrap.appendChild(h('button', { type: 'button', role: 'radio', dataset: { w }, disabled: uit, onclick: () => { waarde = waarde === w && uitzetbaar ? '' : w; teken(); opWijzig(waarde); } }, h('span', label), sub ? h('small', sub) : null));
+    const [w, label] = Array.isArray(o) ? o : [o, o];
+    wrap.appendChild(h('button', { type: 'button', role: 'radio', dataset: { w }, disabled: uit, onclick: () => { waarde = waarde === w && uitzetbaar ? '' : w; teken(); opWijzig(waarde); } }, label));
   }
   teken();
   return wrap;
@@ -149,10 +154,11 @@ export function leverBestand(blob, naam, titel = 'Bestand gereed', onderschrift 
   const mb = blob.size / 1048576;
   const grootte = mb < 0.1 ? Math.max(1, Math.round(blob.size / 1024)) + ' kB' : mb.toFixed(1).replace('.', ',') + ' MB';
   const download = () => { const a = h('a', { href: URL.createObjectURL(blob), download: naam }); document.body.appendChild(a); a.click(); opGeleverd(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 60000); };
-  const inhoud = h('div', h('p.bestandsnaam', naam), h('p.hint', grootte + (onderschrift ? ' · ' + onderschrift : '')),
+  const inhoud = h('div', h('p.bestandsnaam', naam, h('br'), h('span', { style: { color: 'var(--grijs)' } }, grootte + (onderschrift ? ' · ' + onderschrift : ''))),
     h('div.knoprij',
-      kanDelen ? h('button.knop', { type: 'button', onclick: async () => { try { await navigator.share({ files: [/** @type {File} */ (file)], title: naam }); opGeleverd(); } catch (e) { if (e && e.name !== 'AbortError') toast('Delen lukt niet; gebruik Downloaden', 3500); } } }, ICOON.delen(), 'Delen / bewaren…') : null,
-      h('button.knop', { type: 'button', class: kanDelen ? 'licht' : '', onclick: download }, 'Downloaden')));
+      kanDelen ? h('button.knop', { type: 'button', onclick: async () => { try { await navigator.share({ files: [/** @type {File} */ (file)], title: naam }); opGeleverd(); } catch (e) { if (e && e.name !== 'AbortError') toast('Delen lukt niet op dit apparaat; gebruik Downloaden.', 4000); } } }, 'Delen / bewaren…') : null,
+      h('button.knop', { type: 'button', class: kanDelen ? 'licht' : '', onclick: download }, 'Downloaden')),
+    kanDelen ? h('p.hint', { style: { margin: '12px 0 0' } }, 'Via “Delen / bewaren” kun je het bestand opslaan in Bestanden, mailen of naar OneDrive sturen.') : null);
   return dialoog({ titel, inhoud, knoppen: [{ tekst: 'Sluiten', waarde: true, soort: 'licht' }] });
 }
 

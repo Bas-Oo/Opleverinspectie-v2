@@ -3,7 +3,7 @@
    niet in de code. De gebruiker past het aan onder Instellingen; daar wordt het als record 'config' bewaard.
    Een nieuwe sleutel in deze standaard wordt bij het laden automatisch aangevuld (zie vulConfigAan). */
 
-export const APP_VERSIE = '2.0.1';
+export const APP_VERSIE = '2.1.0';
 
 /** @typedef {{code:string, titel:string, uitleg:string, blokkeertOplevering:boolean, limietObject:number|null, limietBlok:number|null, kleur:string}} Urgentie */
 /** @typedef {{key:string, label:string, optioneel?:boolean}} Meter */

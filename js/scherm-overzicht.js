@@ -1,49 +1,58 @@
 // @ts-check
-/* Complexen, complex (matrix per blok) en blok */
-import { h, formulier, bevestig, toast, ICOON, menu, dialoog } from './ui.js';
-import { S, bewaar, complexen, blokkenVan, objectenVanBlok, objectenVanComplex, puntenVan, puntenVanComplex, documentenVanComplex, get, verwijder } from './staat.js';
+/* Complexen, complex en blok — indeling van versie 1: kruimelpad als titel, één knop rechts, lijst met rijen, acties in het menu ☰ */
+import { h, formulier, bevestig, toast, ICOON, dialoog, leverBestand } from './ui.js';
+import { S, bewaar, bewaarConfig, complexen, blokkenVan, objectenVanBlok, objectenVanComplex, puntenVan, puntenVanComplex, documentenVanComplex, get } from './staat.js';
 import * as M from './model.js';
 import { ga, route, ververs } from './nav.js';
-import { urgBadges, faseChip, deadlineChip, kortLabels, leegStaat } from './stukjes.js';
-import { importeerExcel, downloadSjabloon, exportTekortkomingen } from './excel.js';
-import { maakBackup } from './backup.js';
+import { urgBadges, limietBadges, limietOver, statusChip, termijnChip, titelRij, knopMenu, leegStaat, melding, histRij } from './stukjes.js';
+import { importeerExcel, downloadSjabloon } from './excel.js';
+import { maakBackup, zetBackupTerug, opslagInfo } from './backup.js';
+import { pdfVan } from './documenten.js';
 
-const telFases = objecten => {
-  const n = { leeg: 0, vooropname: 0, oplever: 0, herstel: 0, gereed: 0, blokkerend: 0, verlopen: 0 };
+const KR_COMPLEXEN = { tekst: 'Complexen', hash: route.complexen() };
+const krComplex = c => ({ tekst: `${c.nummer} ${c.naam}`.trim(), hash: route.complex(c.id) });
+
+/** Open punten opgeteld over objecten */
+function somTellers(objecten) {
+  const t = { A: 0, B: 0, C: 0, open: 0, ondertekend: 0, nietOpleverbaar: 0, oplever: 0 };
   for (const o of objecten) {
-    const s = M.objectSamenvatting(o, puntenVan(o.id), S.config); n[s.toon]++; if (s.blokkerend) n.blokkerend++;
-    if (o.fase === 'herstel' && o.herstelUiterlijk && M.werkdagenTot(o.herstelUiterlijk) < 0) n.verlopen++;
+    const s = M.objectSamenvatting(o, puntenVan(o.id), S.config);
+    for (const u of S.config.urgenties) t[u.code] = (t[u.code] || 0) + (s.tellers[u.code] || 0);
+    if (o.fase === 'herstel' || o.fase === 'gereed') t.ondertekend++;
+    else if (s.blokkerend) t.nietOpleverbaar++;
+    if (o.fase === 'oplever') t.oplever++;
   }
-  return n;
-};
-const FASE_TEGELS = [['leeg', 'Niet gestart'], ['vooropname', 'Vooropname'], ['oplever', 'Oplevering'], ['herstel', 'Herstel'], ['gereed', 'Gereed']];
+  return t;
+}
 
 /* ===== Complexen ===== */
 export function complexenScherm() {
   const lijst = complexen();
-  const toevoegen = menu(h('button.knop', { type: 'button' }, ICOON.plus(), 'Complex toevoegen'), [
-    { tekst: 'Handmatig toevoegen', fn: nieuwComplex },
-    { tekst: 'Importeren uit Excel', fn: () => importeerExcel(null) },
-    { tekst: 'Importsjabloon downloaden', fn: downloadSjabloon }
-  ]);
+  const kr = [{ tekst: 'Complexen' }];
   const inhoud = h('div',
-    h('div.titelrij', h('h1', 'Complexen'), toevoegen),
-    lijst.length ? h('div.lijst', lijst.map(c => {
-      const obj = objectenVanComplex(c.id), n = telFases(obj);
-      return h('a.rij', { href: route.complex(c.id) },
-        h('div.rij-hoofd', h('div.rij-titel', `${c.nummer} ${c.naam}`.trim()),
-          h('div.rij-sub', `${blokkenVan(c.id).length} blok(ken) · ${obj.length} object(en)`),
-          h('div.fasebalk', FASE_TEGELS.filter(([k]) => n[k]).map(([k, l]) => h('span.chip', { class: 'f-' + k }, `${l} ${n[k]}`)),
-            n.blokkerend ? h('span.chip.verlopen', `${n.blokkerend} met open A/B`) : null, n.verlopen ? h('span.chip.verlopen', `${n.verlopen} termijn verlopen`) : null)),
-        h('span.chev', ICOON.verder()));
-    })) : leegStaat('Nog geen complexen', 'Voeg een complex toe, of importeer de woningen uit Excel (kolommen Blok, Straat, Huisnummer, Toevoeging, of Adres).',
-      h('button.knop', { type: 'button', onclick: () => importeerExcel(null) }, 'Importeren uit Excel'), h('button.knop.licht', { type: 'button', onclick: nieuwComplex }, 'Handmatig toevoegen')));
-  return { kruimels: [{ tekst: 'Complexen' }], inhoud, menu: [
-    { tekst: 'Back-up maken (alles)', icoon: ICOON.schijf, fn: () => maakBackup(null) },
-    { tekst: 'Back-up terugzetten…', fn: () => import('./backup.js').then(m => m.zetBackupTerug()) },
+    titelRij(kr, knopMenu('Complex toevoegen', [
+      { tekst: 'Handmatig toevoegen', fn: nieuwComplex },
+      { tekst: 'Importeren via Excel', fn: () => importeerExcel(null) },
+      { tekst: 'Importsjabloon downloaden', fn: downloadSjabloon }
+    ])),
+    h('div.lijst', lijst.length ? lijst.map(c => {
+      const nObj = objectenVanComplex(c.id).length;
+      return h('a.rij', { href: route.complex(c.id), style: { textDecoration: 'none' } },
+        h('div.rij-hoofd', h('div.rij-titel', `${c.nummer} ${c.naam}`.trim()), h('div.rij-sub', `${blokkenVan(c.id).length} blok(ken) · ${nObj} object(en)`)),
+        h('span.chev', '›'));
+    }) : leegStaat('Nog geen complexen', 'Tik op “Complex toevoegen” om er een handmatig aan te maken of uit Excel te importeren.')));
+  return { kruimels: kr, inhoud, menu: [
+    { tekst: 'Back-up maken (alles)', fn: () => maakBackup(null) },
+    { tekst: 'Back-up terugzetten…', fn: () => zetBackupTerug() },
+    { tekst: 'Back-up en opslag', icoon: ICOON.schijf, fn: toonBackupInfo },
     null,
-    { tekst: 'Instellingen', fn: () => ga(route.instellingen()) }
+    { tekst: 'Instellingen', icoon: ICOON.instellingen, fn: () => ga(route.instellingen()) }
   ] };
+}
+function toonBackupInfo() {
+  dialoog({ titel: 'Back-up en opslag', inhoud: h('div',
+    h('p.hint', { style: { fontSize: '.95rem', whiteSpace: 'normal' } }, 'Alles wordt automatisch op deze tablet opgeslagen, in deze browser en op dit webadres. Een andere browser op dezelfde iPad ziet deze gegevens niet. Maak aan het eind van elke dag een back-up (met foto\'s en documenten) en bewaar die buiten de tablet. Bij veel foto\'s: maak een back-up per complex (menu ☰ in het complex).'),
+    opslagInfo()), knoppen: [{ tekst: 'Sluiten', waarde: true }] });
 }
 
 async function nieuwComplex() {
@@ -51,81 +60,80 @@ async function nieuwComplex() {
     { key: 'nummer', label: 'Complexnummer', placeholder: 'bijv. 960', verplicht: true }, { key: 'naam', label: 'Naam', placeholder: 'Projectnaam' }] });
   if (!r) return;
   if (complexen().some(c => c.nummer.toLowerCase() === r.nummer.toLowerCase())) return toast(`Complex ${r.nummer} bestaat al`, 3500);
-  const c = M.nieuwComplex(r); await bewaar([['complexen', c]]); ga(route.complex(c.id));
+  const c = M.nieuwComplex(r); await bewaar([['complexen', c]]); ververs();
 }
 
 /* ===== Complex ===== */
 export function complexScherm(id) {
   const c = get('complexen', id); if (!c) return null;
-  const blokken = blokkenVan(c.id), alle = objectenVanComplex(c.id), n = telFases(alle);
-  const docs = documentenVanComplex(c.id);
-  const opleverKlaar = alle.filter(o => o.fase === 'oplever').length;
+  const blokken = blokkenVan(c.id), alle = objectenVanComplex(c.id), tc = somTellers(alle);
+  const kr = [KR_COMPLEXEN, { tekst: `${c.nummer} ${c.naam}`.trim() }];
+  const lb = c.laatsteBackup;
   const inhoud = h('div',
-    h('div.titelrij', h('h1', `${c.nummer} ${c.naam}`.trim()),
-      opleverKlaar ? h('a.knop', { href: route.verzamel('complex', c.id) }, ICOON.pen(), 'Gezamenlijk ondertekenen') : null),
-    h('div.tegels', FASE_TEGELS.map(([k, l]) => h('div.tegel', { class: 'f-' + k }, h('div.n', n[k]), h('div.l', l))),
-      h('div.tegel', { class: n.blokkerend ? 'alarm' : '' }, h('div.n', n.blokkerend), h('div.l', 'met open A/B')),
-      n.verlopen ? h('div.tegel.alarm', h('div.n', n.verlopen), h('div.l', 'termijn verlopen')) : null),
-    !standaardCompleet(c) ? h('button.banner.geel', { type: 'button', onclick: () => complexInstellingen(c) },
-      h('div', h('strong', 'Vul de standaardpartijen van het complex in'), h('small', 'Namens opdrachtgever, opdrachtnemer en namens opdrachtnemer gelden dan voor alle objecten. Tik om in te vullen.'))) : null,
-    blokken.length ? blokken.map(b => blokMatrix(b)) : leegStaat('Nog geen blokken', 'Voeg een blok toe of importeer de objecten uit Excel.',
-      h('button.knop', { type: 'button', onclick: () => importeerExcel(c) }, 'Importeren uit Excel'), h('button.knop.licht', { type: 'button', onclick: () => nieuwBlok(c) }, 'Blok toevoegen')),
-    blokken.length ? legenda() : null,
-    docs.length ? h('details.kaart.uitklap', h('summary', h('h3', `Ondertekende en vastgelegde documenten (${docs.length})`)),
-      h('div.lijst.compact', docs.slice().reverse().map(d => docRij(d)))) : null);
-  return { kruimels: [{ tekst: 'Complexen', hash: route.complexen() }, { tekst: `${c.nummer} ${c.naam}`.trim() }], inhoud, menu: [
+    titelRij(kr, h('button.knop', { type: 'button', onclick: () => nieuwBlok(c) }, 'Blok toevoegen')),
+    !standaardCompleet(c) && alle.length ? h('button.banner.geel.klik', { type: 'button', style: { display: 'block' }, onclick: () => complexInstellingen(c) },
+      'Vul de standaardgegevens van het complex in', h('small', 'Namens opdrachtgever, opdrachtnemer en namens opdrachtnemer gelden dan voor alle objecten. Tik om in te vullen.')) : null,
+    h('div.lijst', blokken.length ? blokken.map(b => {
+      const obj = objectenVanBlok(b.id), t = somTellers(obj);
+      return h('a.rij', { href: route.blok(b.id), style: { textDecoration: 'none' } },
+        h('div.rij-hoofd', h('div.rij-titel', `Blok ${b.naam}`),
+          h('div.rij-sub', `${obj.length} object(en) · ${t.ondertekend} ondertekend opgeleverd${t.nietOpleverbaar ? ' · ' + t.nietOpleverbaar + ' niet opleverbaar' : ''}`)),
+        h('div.badges', urgBadges(t), limietBadges(t, 'blok')), h('span.chev', '›'));
+    }) : leegStaat('Nog geen blokken', 'Voeg een blok toe; daarin komen de woningen en algemene ruimten. Of importeer de objecten uit Excel via het menu ☰.')),
+    verzamelHistorie(c, null),
+    h('div.status-lijn', lb ? 'Laatste back-up van dit complex: ' + new Date(lb).toLocaleString('nl-NL') : 'Van dit complex is nog geen back-up gemaakt.'));
+  return { kruimels: kr, inhoud, menu: [
+    { tekst: 'Complex afronden', fn: () => ga(route.verzamel('complex', c.id)), uit: !tc.oplever, titel: tc.oplever ? `${tc.oplever} object(en) met een gestarte oplevering` : 'Geen objecten om in één keer af te ronden' },
     { tekst: 'Complex instellingen', fn: () => complexInstellingen(c) },
-    { tekst: 'Blok toevoegen', fn: () => nieuwBlok(c) },
-    { tekst: 'Objecten importeren uit Excel', fn: () => importeerExcel(c) },
-    null,
-    { tekst: 'Gezamenlijk ondertekenen…', fn: () => ga(route.verzamel('complex', c.id)), uit: !opleverKlaar },
-    { tekst: 'Tekortkomingen naar Excel', icoon: ICOON.excel, fn: () => exportTekortkomingen('excel', { complex: c }) },
-    { tekst: 'Tekortkomingenlijst (PDF)', icoon: ICOON.doc, fn: () => exportTekortkomingen('pdf', { complex: c }) },
-    { tekst: 'Back-up van dit complex', icoon: ICOON.schijf, fn: () => maakBackup(c) },
-    null,
-    { tekst: 'Complex verwijderen…', gevaar: true, fn: () => verwijderComplex(c) }
+    { tekst: 'Back-up van dit complex', fn: async () => { await maakBackup(c); } },
+    { tekst: 'Objecten importeren uit Excel', fn: () => importeerExcel(c) }
   ] };
 }
 const standaardCompleet = c => M.PARTIJ_VELDEN.every(([k]) => String(c.standaard[k] || '').trim());
 
-function blokMatrix(b) {
-  const obj = objectenVanBlok(b.id), labels = kortLabels(obj);
-  return h('section.blok-sectie',
-    h('div.blok-kop', h('h2', `Blok ${b.naam}`), h('span.hint', `${obj.length} object(en)`), h('a.knop.licht.klein', { href: route.blok(b.id) }, 'Lijst', ICOON.verder())),
-    obj.length ? h('div.matrix', obj.map(o => {
-      const s = M.objectSamenvatting(o, puntenVan(o.id), S.config);
-      const dl = o.fase === 'herstel' && o.herstelUiterlijk ? M.werkdagenTot(o.herstelUiterlijk) : null;
-      return h('a.cel', { href: route.object(o.id), class: 'f-' + s.toon + (s.blokkerend ? ' blokkeert' : '') + (dl !== null && dl < 0 ? ' verlopen' : ''), title: `${o.adres} — ${s.label}` },
-        h('span.cel-label', labels.get(o.id)),
-        h('span.cel-sub', s.tellers.open ? `${s.tellers.open} open` : s.label === 'Niet gestart' ? '' : s.toon === 'gereed' ? '✓' : '0 open'));
-    })) : h('p.hint', 'Nog geen objecten in dit blok.'));
+/** Verzamelafrondingen (gezamenlijk ondertekende processen-verbaal) op het complex- of blokscherm */
+function verzamelHistorie(c, b) {
+  const docs = documentenVanComplex(c.id).filter(d => d.soort === 'verzamel' && (!b || d.blokId === b.id || d.objectIds.some(id => (get('objecten', id) || {}).blokId === b.id)));
+  if (!docs.length) return null;
+  return h('div.kaart', { style: { marginTop: '20px' } }, h('h3', 'Verzamelafrondingen'), h('div', { style: { marginTop: '6px' } }, docs.slice().reverse().map(d => {
+    const vervangers = Array.from(S.documenten.values()).filter(x => x.vervangt === d.id);
+    const getekend = d.ondertekenaars.filter(o => o.getekend).map(o => o.naam || o.rol).join(' en ');
+    const opm = vervangers.length ? h('div.vz-reden', `Vervangen door herziening: ${vervangers.map(x => (get('objecten', x.objectIds[0]) || {}).adres).join(', ')}. Voor de andere objecten blijft dit document geldig.`) : null;
+    return histRij(`${d.inhoud && d.inhoud.blok ? 'Blok ' + d.inhoud.blok : 'Complex ' + c.nummer} · ${M.fmtDatum(d.datum)}`, `${d.objectIds.length} object(en) · getekend door ${getekend || '—'}`, opm,
+      pdfKnop(d, 'Verzamel-PDF'), h('a.knop.licht.klein', { href: route.document(d.id) }, 'Details'));
+  })));
 }
-function legenda() {
-  return h('div.legenda', FASE_TEGELS.map(([k, l]) => h('span', h('i.cel-mini', { class: 'f-' + k }), l)), h('span', h('i.cel-mini.blokkeert'), 'open A/B'), h('span', h('i.cel-mini.verlopen'), 'termijn verlopen'));
-}
-export function docRij(d) {
-  const vervangers = Array.from(S.documenten.values()).filter(x => x.vervangt === d.id);
-  const vervangen = vervangers.length ? (d.objectIds.length > 1 ? 'deels vervangen' : 'vervangen') : '';
-  return h('a.rij.klein', { href: route.document(d.id) }, h('span.rij-ico', ICOON.doc()),
-    h('div.rij-hoofd', h('div.rij-titel', d.titel + (d.soort === 'verzamel' ? '' : ` — ${(get('objecten', d.objectIds[0]) || {}).adres || ''}`)),
-      h('div.rij-sub', `${M.fmtDatum(d.datum)} · ${d.soort === 'vooropname' ? 'vastgelegd, niet ondertekend' : 'ondertekend'} · kenmerk ${d.inhoudKenmerk.slice(0, 8).toUpperCase()}${d.objectIds.length > 1 ? ` · ${d.objectIds.length} objecten` : ''}`)),
-    vervangen ? h('span.chip.verlopen', vervangen) : null, h('span.chev', ICOON.verder()));
+/** Knop die de vastgelegde PDF van een document aflevert */
+export function pdfKnop(d, tekst = 'PDF') {
+  return h('button.knop.licht.klein', { type: 'button', onclick: async () => { const b = await pdfVan(d); if (!b) return toast('Bestand niet gevonden in de opslag', 4000); leverBestand(b, d.bestandsnaam, 'PDF gereed', `kenmerk ${d.inhoudKenmerk.slice(0, 8).toUpperCase()}`); } }, tekst);
 }
 
+/* Complex instellingen (versie 1.6.3): complexgegevens, standaardgegevens en waarschuwing C-punten in één dialoog */
 export async function complexInstellingen(c) {
-  const r = await formulier({ titel: `Complex ${c.nummer}`, tekst: 'Standaardpartijen en netbeheerders gelden voor alle objecten die zelf niets hebben ingevuld.', velden: [
-    { key: 'nummer', label: 'Complexnummer', waarde: c.nummer, verplicht: true }, { key: 'naam', label: 'Naam', waarde: c.naam },
-    ...M.PARTIJ_VELDEN.map(([k, l]) => ({ key: k, label: l, waarde: c.standaard[k] })),
+  const C = S.config.urgenties.find(u => u.code === 'C');
+  const r = await formulier({ titel: 'Complex instellingen', velden: [
+    { key: 'nummer', label: 'Complexnummer', waarde: c.nummer, verplicht: true, sectie: 'Complex' }, { key: 'naam', label: 'Naam', waarde: c.naam },
+    ...M.PARTIJ_VELDEN.map(([k, l], i) => Object.assign({ key: k, label: l, waarde: c.standaard[k] }, i ? {} : { sectie: 'Standaardgegevens', sectieHint: 'Gelden voor alle objecten van dit complex, ook voor geïmporteerde. Een object wijkt alleen af als daar zelf iets anders is ingevuld.' })),
     { key: 'netElektra', label: 'Netbeheerder elektra', waarde: c.standaard.netElektra, placeholder: 'bijv. Liander' },
-    { key: 'netWater', label: 'Netbeheerder water', waarde: c.standaard.netWater, placeholder: 'bijv. Vitens' }] });
+    { key: 'netWater', label: 'Netbeheerder water', waarde: c.standaard.netWater, placeholder: 'bijv. Vitens' },
+    ...(C ? [{ key: 'cObject', label: 'Max. C-punten per woning', soort: 'getal', waarde: C.limietObject ?? '', placeholder: 'geen waarschuwing', sectie: 'Waarschuwing C-punten (laag)', sectieHint: 'De app waarschuwt als een woning of blok meer C-punten heeft dan hier ingesteld. Leeg laten = geen waarschuwing. Deze waarden gelden voor alle complexen (ook te wijzigen onder Instellingen).' },
+      { key: 'cBlok', label: 'Max. C-punten per blok', soort: 'getal', waarde: C.limietBlok ?? '', placeholder: 'geen waarschuwing' }] : [])],
+    extra: [{ tekst: 'Complex verwijderen…', waarde: 'weg', soort: 'gevaar' }] });
   if (!r) return;
+  if (r._actie === 'weg') return verwijderComplex(c);
   if (r.nummer.toLowerCase() !== c.nummer.toLowerCase() && complexen().some(x => x.nummer.toLowerCase() === r.nummer.toLowerCase())) return toast(`Complex ${r.nummer} bestaat al`, 3500);
   c.nummer = r.nummer; c.naam = r.naam;
   for (const k of ['vertOpdrachtgever', 'opdrachtnemer', 'vertOpdrachtnemer', 'netElektra', 'netWater']) c.standaard[k] = r[k];
-  await bewaar([['complexen', c]]); ververs(); toast('Opgeslagen');
+  await bewaar([['complexen', c]]);
+  if (C) {
+    const getal = v => { const n = parseInt(v, 10); return Number.isFinite(n) && n >= 0 ? n : null; };
+    const cfg = structuredClone(S.config), cc = cfg.urgenties.find(u => u.code === 'C');
+    if (cc.limietObject !== getal(r.cObject) || cc.limietBlok !== getal(r.cBlok)) { cc.limietObject = getal(r.cObject); cc.limietBlok = getal(r.cBlok); await bewaarConfig(cfg); }
+  }
+  ververs(); toast('Opgeslagen');
 }
 async function nieuwBlok(c) {
-  const r = await formulier({ titel: 'Blok toevoegen', ok: 'Toevoegen', velden: [{ key: 'naam', label: 'Naam of letter van het blok', verplicht: true }] });
+  const r = await formulier({ titel: 'Nieuw blok', ok: 'Toevoegen', velden: [{ key: 'naam', label: 'Bloknaam of -letter', placeholder: 'bijv. A', verplicht: true }] });
   if (!r) return;
   if (blokkenVan(c.id).some(b => b.naam.toLowerCase() === r.naam.toLowerCase())) return toast(`Blok ${r.naam} bestaat al`);
   const b = M.nieuwBlok(c, r.naam); await bewaar([['blokken', b]]); ververs();
@@ -133,8 +141,9 @@ async function nieuwBlok(c) {
 async function verwijderComplex(c) {
   const docs = documentenVanComplex(c.id);
   if (docs.some(d => d.soort !== 'vooropname')) return dialoog({ titel: 'Kan niet verwijderen', tekst: `Complex ${c.nummer} heeft ondertekende documenten. Die blijven altijd bewaard; het complex kan daarom niet worden verwijderd.` });
-  if (!await bevestig(`Complex ${c.nummer} verwijderen?`, 'Alle blokken, objecten, punten en foto\'s van dit complex worden verwijderd. Maak eerst een back-up als je twijfelt.', 'Verwijderen', true)) return;
-  const ops = [['complexen', c], ...blokkenVan(c.id).map(b => ['blokken', b]), ...objectenVanComplex(c.id).map(o => ['objecten', o]), ...puntenVanComplex(c.id).map(p => ['punten', p])];
+  const obj = objectenVanComplex(c.id);
+  if (!await bevestig('Complex verwijderen?', `Complex ${c.nummer} ${c.naam} met ${blokkenVan(c.id).length} blok(ken) en ${obj.length} object(en), inclusief alle punten en foto's, wordt definitief verwijderd.`, 'Verwijderen', true)) return;
+  const ops = [['complexen', c], ...blokkenVan(c.id).map(b => ['blokken', b]), ...obj.map(o => ['objecten', o]), ...puntenVanComplex(c.id).map(p => ['punten', p])];
   ops.forEach(([, r]) => { r.verwijderd = true; });
   await bewaar(/** @type {any} */ (ops)); ga(route.complexen()); toast('Complex verwijderd');
 }
@@ -142,46 +151,45 @@ async function verwijderComplex(c) {
 /* ===== Blok ===== */
 export function blokScherm(id) {
   const b = get('blokken', id); if (!b) return null;
-  const c = get('complexen', b.complexId), obj = objectenVanBlok(b.id);
-  const opleverKlaar = obj.filter(o => o.fase === 'oplever').length;
+  const c = get('complexen', b.complexId), obj = objectenVanBlok(b.id), t = somTellers(obj);
+  const kr = [KR_COMPLEXEN, krComplex(c), { tekst: `Blok ${b.naam}` }];
+  const over = limietOver(t, 'blok');
   const inhoud = h('div',
-    h('div.titelrij', h('h1', `Blok ${b.naam}`),
-      h('div.knoprij.rechts', opleverKlaar ? h('a.knop', { href: route.verzamel('blok', b.id) }, ICOON.pen(), 'Gezamenlijk ondertekenen') : null,
-        h('button.knop.licht', { type: 'button', onclick: () => nieuwObject(c, b) }, ICOON.plus(), 'Object'))),
-    obj.length ? h('div.lijst', obj.map(o => {
+    over.map(x => h('div.banner.geel', `⚠️ ${x.n} ${x.code}-punten in dit blok — meer dan de limiet van ${x.limiet} per blok.`)),
+    titelRij(kr, h('button.knop', { type: 'button', onclick: () => nieuwObject(c, b) }, 'Object toevoegen')),
+    h('div.lijst', obj.length ? obj.map(o => {
       const s = M.objectSamenvatting(o, puntenVan(o.id), S.config);
-      return h('a.rij', { href: route.object(o.id) },
+      return h('a.rij', { href: route.object(o.id), style: { textDecoration: 'none' } },
         h('div.rij-hoofd', h('div.rij-titel', o.adres), h('div.rij-sub', o.type),
-          h('div.fasebalk', faseChip(s), deadlineChip(o), s.tellers.teBeoordelen ? h('span.chip.krap', `${s.tellers.teBeoordelen} te beoordelen`) : null)),
-        urgBadges(s.tellers), h('span.chev', ICOON.verder()));
-    })) : leegStaat('Nog geen objecten', 'Voeg een object toe of importeer ze uit Excel op het complexscherm.'));
-  return { kruimels: [{ tekst: 'Complexen', hash: route.complexen() }, { tekst: `${c.nummer} ${c.naam}`.trim(), hash: route.complex(c.id) }, { tekst: `Blok ${b.naam}` }], inhoud, menu: [
-    { tekst: 'Object toevoegen', fn: () => nieuwObject(c, b) },
-    { tekst: 'Blok hernoemen', fn: () => hernoemBlok(c, b) },
-    { tekst: 'Gezamenlijk ondertekenen…', fn: () => ga(route.verzamel('blok', b.id)), uit: !opleverKlaar },
-    { tekst: 'Tekortkomingen naar Excel', icoon: ICOON.excel, fn: () => exportTekortkomingen('excel', { complex: c, blok: b }) },
-    { tekst: 'Tekortkomingenlijst (PDF)', icoon: ICOON.doc, fn: () => exportTekortkomingen('pdf', { complex: c, blok: b }) },
-    null,
-    { tekst: 'Blok verwijderen…', gevaar: true, fn: () => verwijderBlok(c, b), uit: obj.some(o => o.fase !== 'voor') }
+          h('div.badges', { style: { marginTop: '6px' } }, statusChip(o, s), termijnChip(o), s.tellers.teBeoordelen ? h('span.badge.krap', `${s.tellers.teBeoordelen} te beoordelen`) : null)),
+        h('div.badges', urgBadges(s.tellers), limietBadges(s.tellers, 'object')), h('span.chev', '›'));
+    }) : leegStaat('Nog geen objecten', 'Voeg de woningen en algemene ruimten van dit blok toe.')),
+    verzamelHistorie(c, b));
+  return { kruimels: kr, inhoud, menu: [
+    { tekst: 'Blok afronden', fn: () => ga(route.verzamel('blok', b.id)), uit: !t.oplever, titel: t.oplever ? `${t.oplever} object(en) met een gestarte oplevering` : 'Geen objecten om in één keer af te ronden' },
+    { tekst: 'Blok bewerken', fn: () => blokBewerken(c, b) }
   ] };
 }
 async function nieuwObject(c, b) {
-  const r = await formulier({ titel: `Object toevoegen aan blok ${b.naam}`, ok: 'Toevoegen', velden: [
-    { key: 'adres', label: 'Adres', placeholder: 'bijv. Churchillweg 31-1', verplicht: true }, { key: 'type', label: 'Type', soort: 'keuze', opties: S.config.objectTypes, waarde: S.config.objectTypes[0] }] });
+  const r = await formulier({ titel: 'Nieuw object', ok: 'Toevoegen', velden: [
+    { key: 'adres', label: 'Adres', placeholder: 'Straat en huisnummer', verplicht: true }, { key: 'type', label: 'Type', soort: 'keuze', opties: S.config.objectTypes, waarde: S.config.objectTypes[0] }] });
   if (!r) return;
   if (objectenVanBlok(b.id).some(o => o.adres.toLowerCase() === r.adres.toLowerCase())) return toast('Dit adres staat al in het blok');
-  const o = M.nieuwObject(c, b, r); await bewaar([['objecten', o], ['complexen', c]]); ga(route.object(o.id));
+  const o = M.nieuwObject(c, b, r); await bewaar([['objecten', o], ['complexen', c]]); ververs();
 }
-async function hernoemBlok(c, b) {
-  const r = await formulier({ titel: 'Blok hernoemen', velden: [{ key: 'naam', label: 'Naam', waarde: b.naam, verplicht: true }] });
+async function blokBewerken(c, b) {
+  const obj = objectenVanBlok(b.id), kanWeg = !obj.some(o => o.fase !== 'voor');
+  const r = await formulier({ titel: 'Blok bewerken', velden: [{ key: 'naam', label: 'Bloknaam', waarde: b.naam, verplicht: true }],
+    extra: [{ tekst: 'Blok verwijderen…', waarde: 'weg', soort: 'gevaar' }] });
   if (!r) return;
+  if (r._actie === 'weg') {
+    if (!kanWeg) return dialoog({ titel: 'Kan niet verwijderen', tekst: `In blok ${b.naam} is bij een of meer objecten de oplevering al gestart. Vastgelegde documenten blijven altijd bewaard; het blok kan daarom niet worden verwijderd.` });
+    if (!await bevestig('Blok verwijderen?', `Blok ${b.naam} met ${obj.length} object(en), inclusief alle punten en foto's, wordt definitief verwijderd.`, 'Verwijderen', true)) return;
+    const ops = [['blokken', b], ...obj.flatMap(o => [['objecten', o], ...puntenVan(o.id).map(p => ['punten', p])])];
+    ops.forEach(([, x]) => { x.verwijderd = true; });
+    await bewaar(/** @type {any} */ (ops)); return ga(route.complex(c.id));
+  }
   if (blokkenVan(c.id).some(x => x !== b && x.naam.toLowerCase() === r.naam.toLowerCase())) return toast(`Blok ${r.naam} bestaat al`);
   b.naam = r.naam; await bewaar([['blokken', b]]); ververs();
 }
-async function verwijderBlok(c, b) {
-  if (!await bevestig(`Blok ${b.naam} verwijderen?`, 'Het blok met alle objecten, punten en foto\'s wordt verwijderd.', 'Verwijderen', true)) return;
-  const ops = [['blokken', b], ...objectenVanBlok(b.id).flatMap(o => [['objecten', o], ...puntenVan(o.id).map(p => ['punten', p])])];
-  ops.forEach(([, r]) => { r.verwijderd = true; });
-  await bewaar(/** @type {any} */ (ops)); ga(route.complex(c.id));
-}
-export { verwijder };
+export { melding };
